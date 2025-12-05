@@ -3,6 +3,9 @@ const shell = require('shelljs')
 
 try {
   const BROKER_TYPE = core.getInput('BROKER_TYPE').toLowerCase()
+  const APPLICATION_VERSION_ID = core.getInput('APPLICATION_VERSION_ID')
+  const PLAN_ONLY = core.getInput('PLAN_ONLY')
+  const PROMOTE_ONLY = core.getInput('PROMOTE_ONLY')
   process.env.SOLACE_MESSAGING_SERVICE = core.getInput('SOLACE_MESSAGING_SERVICE');
   process.env.SOLACE_CLOUD_TOKEN =   core.getInput('SOLACE_CLOUD_TOKEN');
   process.env.TF_VAR_confluent_cloud_api_key = core.getInput('TF_VAR_confluent_cloud_api_key');
@@ -33,16 +36,38 @@ try {
       throw new Error(`Broker Type ${BROKER_TYPE} not supported`);
   }
 
-  shell.exec('git clone https://github.com/TamimiGitHub/solace-terraform-provisioning ')
+  shell.exec('git clone https://github.com/TamimiGitHub/solace-terraform-provisioning; cd solace-terraform-provisioning; npm i')
 
-  shell.exec('cd solace-terraform-provisioning; npm i; npm run provision', (code, stderr) => {
-    if (code != 0) {
-      throw new Error(stderr)
-    }
-  })
+  if(PROMOTE_ONLY != "none") {
+    shell.exec(`cd solace-terraform-provisioning; \
+    npm run promote -- -appVID ${APPLICATION_VERSION_ID} -mes ${process.env.SOLACE_MESSAGING_SERVICE};`, (code, stderr) => {
+      if (code != 0) {
+        throw new Error(stderr)
+      }
+      process.exit(0)
+    })
+  }
 
-  const time = (new Date()).toTimeString();
-  core.setOutput("time", time);
+  if(PLAN_ONLY != "none") {
+    shell.exec(`cd solace-terraform-provisioning; \
+    npm run promote -- -appVID ${APPLICATION_VERSION_ID} -mes ${process.env.SOLACE_MESSAGING_SERVICE}; \
+    npm run plan 2>&1 | tee out.txt; \
+    npm run promote -- -d -appVID ${APPLICATION_VERSION_ID} -mes ${process.env.SOLACE_MESSAGING_SERVICE}`, (code, stderr) => {
+      if (code != 0) {
+        throw new Error(stderr)
+      }
+      let tf_plan = shell.cat("solace-terraform-provisioning/out.txt")
+      core.setOutput("tf_plan", tf_plan.stdout);
+    })
+  } else{
+    shell.exec(`cd solace-terraform-provisioning; \
+    npm run promote -- -appVID ${APPLICATION_VERSION_ID} -mes ${process.env.SOLACE_MESSAGING_SERVICE};\
+    npm run provision`, (code, stderr) => {
+      if (code != 0) {
+        throw new Error(stderr)
+      }
+    })
+  }
 } catch (error) {
   core.setFailed(error.message);
 }

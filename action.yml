@@ -1,4 +1,4 @@
-name: 'Solace Event Portal Provisioning'
+name: 'Solace Event Portal Provisioning using Terraform'
 description: 'Github action enabling Event Portal to Infrastructure provisioning'
 branding:
   icon: 'download-cloud'
@@ -33,10 +33,22 @@ inputs:
     required: false
   AWS_ACCESS_KEY_ID:
     description: 'AWS_ACCESS_KEY_ID'
-    required: false
+    required: true
   AWS_SECRET_ACCESS_KEY:
     description: 'AWS_SECRET_ACCESS_KEY'
+    required: true
+  APPLICATION_VERSION_ID:
+    description: 'The application version ID to be promoted'
     required: false
+    default: "none"
+  PLAN_ONLY:
+    description: 'Only run terrafrom plan'
+    required: false
+    default: "none"
+  PROMOTE_ONLY:
+    description: 'Only promote the target Application Version ID'
+    required: false
+    default: "none"
 runs:
   using: 'node20'
   main: 'dist/index.js'
